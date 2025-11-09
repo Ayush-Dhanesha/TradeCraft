@@ -190,7 +190,57 @@ Key components:
 
 ---
 
-## 3. Component Responsibilities
+## 3. Technology Stack
+
+### Backend Services
+- **Primary Language**: Go (Golang) - chosen for high performance, concurrency, and low latency
+- **API Framework**: Gin, Echo, or Chi for HTTP routing
+- **gRPC**: For internal service-to-service communication (optional, high-performance alternative)
+- **WebSocket**: Gorilla WebSocket or similar for real-time streaming
+
+### Data Layer
+- **PostgreSQL 15+**: Primary relational database
+- **TimescaleDB**: Time-series extension for PostgreSQL (market data, analytics)
+- **Redis 7+**: Caching, session management, pub/sub, real-time data
+- **Elasticsearch 8+**: Full-text search and log aggregation
+- **S3 / MinIO**: Object storage for files and backups
+
+### Message Broker
+- **Apache Kafka**: Event streaming and inter-service communication
+- **Alternative**: RabbitMQ (if lower latency needed for specific use cases)
+
+### Infrastructure & DevOps
+- **Containerization**: Docker with multi-stage builds
+- **Orchestration**: Kubernetes (EKS on AWS)
+- **Service Mesh**: Istio or Linkerd (optional, for advanced traffic management)
+- **API Gateway**: NGINX, Kong, or AWS API Gateway
+- **CI/CD**: GitHub Actions or GitLab CI
+- **IaC**: Terraform for infrastructure provisioning
+
+### Observability
+- **Metrics**: Prometheus + Grafana
+- **Logging**: ELK Stack (Elasticsearch, Logstash, Kibana) or EFK (Fluentd)
+- **Tracing**: Jaeger or Tempo for distributed tracing
+- **Error Tracking**: Sentry
+- **APM**: Optional - Datadog, New Relic for application performance monitoring
+
+### External Services
+- **Email**: SendGrid or AWS SES
+- **Push Notifications**: Firebase Cloud Messaging (FCM)
+- **SMS**: Twilio
+- **Market Data**: Binance WebSocket API, CoinGecko API (fallback)
+
+### Development Tools
+- **Linting**: golangci-lint
+- **Formatting**: gofmt, goimports
+- **Testing**: Go standard testing package, testify for assertions
+- **Mocking**: gomock, mockery for interface mocks
+- **Load Testing**: k6, Gatling
+- **API Documentation**: OpenAPI/Swagger with swaggo
+
+---
+
+## 4. Component Responsibilities
 
 Auth Service
 - User registration, login, JWT issuance and revocation, password hashing, session management (Redis), role/permission checks.
@@ -217,7 +267,7 @@ WebSocket / Real-time Broadcaster
 - Subscribes to Redis/Kafka channels and forwards messages to authenticated clients; supports subscription channels (orderbook, trades, ticker, user channels).
 
 Notification Service (with Worker)
-- Routes events to delivery channels (in-app, email via SendGrid, push). Uses Celery-like worker for async tasks and retries.
+- Routes events to delivery channels (in-app, email via SendGrid, push via FCM, SMS via Twilio). Uses background worker queue for async tasks and retries.
 
 Analytics & Leaderboard
 - Batch + incremental calculations: Sharpe, Sortino, Drawdown, leaderboards in Redis sorted sets, exposes metrics endpoints.
@@ -227,7 +277,7 @@ Social Service
 
 ---
 
-## 4. Event Topics (Kafka)
+## 5. Event Topics (Kafka)
 
 Core topics:
 - order.placed — carries order metadata (trading → matching engine)
@@ -245,7 +295,7 @@ Message contract guidelines:
 
 ---
 
-## 5. Data Model (high-level)
+## 6. Data Model (high-level)
 
 Primary relational tables (Postgres):
 - users (id, email, username, hashed_password, created_at, ...)
@@ -275,7 +325,7 @@ S3 / Object store:
 
 ---
 
-## 6. APIs (high-level endpoints)
+## 7. APIs (high-level endpoints)
 
 Auth:
 - POST /auth/register
@@ -317,7 +367,7 @@ Security: all user-sensitive endpoints protected behind JWT and role checks.
 
 ---
 
-## 7. Non-functional Requirements
+## 8. Non-functional Requirements
 
 Performance
 - Trading API P95 < 100ms for simple CRUD operations.
@@ -346,7 +396,7 @@ Compliance & Privacy
 
 ---
 
-## 8. Deployment & Infrastructure (high-level)
+## 9. Deployment & Infrastructure (high-level)
 
 Target: AWS (managed services recommended):
 - EKS / ECS for containerized microservices
@@ -358,21 +408,25 @@ Target: AWS (managed services recommended):
 - IAM roles for service-to-service access; Secrets Manager for secrets
 
 CI/CD
-- GitHub Actions / GitLab CI pipeline: build, test, image publish to ECR, progressive rollout to staging then production.
+- GitHub Actions / GitLab CI pipeline: build, test, static analysis, image publish to ECR, progressive rollout to staging then production.
+- Docker multi-stage builds for optimized container images.
+- Automated testing gates before deployment (unit, integration, contract tests).
 
 ---
 
-## 9. Testing & QA Strategy
+## 10. Testing & QA Strategy
 
-- Unit tests for service logic (80% target for critical services like matching engine, wallet).
-- Integration tests using ephemeral docker-compose test environment (Postgres, Redis, Kafka) for end-to-end flows.
-- Contract tests for event schemas (Kafka topics).
-- Load tests with Locust to validate throughput and latency targets.
-- Chaos testing for resilience (network partitions, broker failures).
+- **Unit tests** for service logic (80% target for critical services like matching engine, wallet).
+- **Integration tests** using ephemeral docker-compose test environment (Postgres, Redis, Kafka) for end-to-end flows.
+- **Contract tests** for event schemas (Kafka topics) using schema registry validation.
+- **Load tests** with k6, Gatling, or similar tools to validate throughput and latency targets (target: 500+ orders/sec).
+- **Chaos testing** for resilience (network partitions, broker failures, pod restarts).
+- **Benchmark tests** for critical paths (matching engine, order placement, BBO calculation).
+- **Security testing** including penetration testing, dependency scanning, and OWASP compliance.
 
 ---
 
-## 10. Security & Operational Notes
+## 11. Security & Operational Notes
 
 - Apply RBAC and least privilege per service account in AWS.
 - Rotate secrets regularly and maintain strong logging for suspicious access.
@@ -381,7 +435,7 @@ CI/CD
 
 ---
 
-## 11. Data Retention & GDPR Considerations
+## 12. Data Retention & GDPR Considerations
 
 - Default retention for raw market ticks: 90 days hot + compressed cold storage.
 - Trades and user transactions: keep for at least 7 years for auditability (configurable), with export/erase per privacy requirements.
@@ -389,17 +443,17 @@ CI/CD
 
 ---
 
-## 12. Initial Developer Onboarding / Minimal Implementation Steps
+## 13. Initial Developer Onboarding / Minimal Implementation Steps
 
 1. Initialize repository and create `docker-compose.yml` for local dev with: Postgres (with Timescale), Redis, Kafka + Zookeeper, and a simple Nginx gateway.
 2. Create `.env.example` listing DB, Redis, Kafka connection strings and secrets placeholders.
-3. Scaffold minimal FastAPI health-check service and a simple producer/consumer for `trade.executed` (end-to-end smoke test).
-4. Add pre-commit hooks (black, flake8, mypy) and CI pipeline skeleton.
+3. Scaffold minimal health-check service with HTTP server and a simple producer/consumer for `trade.executed` (end-to-end smoke test).
+4. Add pre-commit hooks (linting, formatting, static analysis) and CI pipeline skeleton.
 5. Add observability: local Prometheus and Grafana dashboards for dev.
 
 ---
 
-## 13. Roadmap & Next Milestones (first 4 weeks)
+## 14. Roadmap & Next Milestones (first 4 weeks)
 
 - Week 1: Dev environment, Docker Compose, initial services scaffolding (Auth, Trading API, Matching Engine skeleton).
 - Week 2: Database schema and migrations; implement order book data structures.
@@ -408,7 +462,7 @@ CI/CD
 
 ---
 
-## 14. Open Decisions / Risks
+## 15. Open Decisions / Risks
 
 - Matching Engine scaling model: single-process per symbol vs multi-tenant multi-process — needs benchmark-driven decision.
 - Choice of managed vs self-hosted Kafka/Timescale for production cost/performance trade-offs.
@@ -416,7 +470,7 @@ CI/CD
 
 ---
 
-## 15. Appendices
+## 16. Appendices
 
 - Event schema examples and API contracts should be added as separate documents in `docs/contracts/`.
 - Network diagram and AWS architecture (detailed) to follow when moving to infra planning.
