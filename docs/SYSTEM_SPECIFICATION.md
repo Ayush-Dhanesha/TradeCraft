@@ -29,19 +29,33 @@ The platform follows a microservices architecture with clear separation of conce
 ---
 config:
   layout: elk
+  theme: dark
+  themeVariables:
+    fontSize: 24px
+    fontFamily: 'Arial, sans-serif'
+    primaryTextColor: '#ffffff'
+    secondaryTextColor: '#ffffff'
+    tertiaryTextColor: '#ffffff'
+    clusterBkg: '#2a2a2a'
+    clusterBorder: '#666666'
+    titleColor: '#ffffff'
+    edgeLabelBackground: '#1a1a1a'
+    nodePadding: 20
+    rankSpacing: 80
+    nodeSpacing: 60
 ---
 flowchart TB
-    subgraph Client["👥 CLIENT APPLICATIONS"]
+    subgraph Client[" "]
         WebApp("🌐 Web Application<br/>Responsive Design<br/>Desktop • Tablet • Mobile")
         MobileApp("📱 Mobile Application<br/>Native iOS & Android<br/>Optional Future Release")
     end
 
-    subgraph Security["🔐 SECURITY & AUTHENTICATION"]
+    subgraph Security[" "]
         Auth("Auth Service<br/>━━━━━━━━━<br/>• User Management<br/>• JWT Tokens<br/>• Session Handling<br/>• Role-Based Access<br/>━━━━━━━━━<br/>PostgreSQL + Redis")
         ApiGW("API Gateway<br/>━━━━━━━━━<br/>NGINX / Kong / AWS<br/>━━━━━━━━━<br/>• JWT Validation<br/>• Rate Limiting<br/>• Load Balancing<br/>• SSL Termination")
     end
 
-    subgraph CoreTrading["📊 CORE TRADING SERVICES"]
+    subgraph CoreTrading[" "]
         Trading("Trading Service<br/>━━━━━━━━━<br/>• Order Placement<br/>• Order Validation<br/>• Order History<br/>• Order Status<br/>━━━━━━━━━<br/>PostgreSQL + Redis")
         
         Matching("Matching Engine<br/>━━━━━━━━━<br/>• Order Book Management<br/>• Buy/Sell Matching<br/>• Trade Execution<br/>• Price-Time Priority<br/>━━━━━━━━━<br/>Redis In-Memory")
@@ -49,13 +63,13 @@ flowchart TB
         Portfolio("Portfolio Service<br/>━━━━━━━━━<br/>• Holdings Tracking<br/>• P&L Calculation<br/>• Performance Metrics<br/>• Risk Analysis<br/>━━━━━━━━━<br/>PostgreSQL")
     end
 
-    subgraph MarketServices["📈 MARKET & ANALYTICS"]
+    subgraph MarketServices[" "]
         Market("Market Data Service<br/>━━━━━━━━━<br/>• Real-time Prices<br/>• Historical Data<br/>• OHLCV Charts<br/>• Market Depth<br/>━━━━━━━━━<br/>TimescaleDB + Redis")
         
         Analytics("Analytics Service<br/>━━━━━━━━━<br/>• Trade Statistics<br/>• User Rankings<br/>• Performance Reports<br/>• Leaderboards<br/>━━━━━━━━━<br/>TimescaleDB")
     end
 
-    subgraph UserServices["👥 USER ENGAGEMENT"]
+    subgraph UserServices[" "]
         Social("Social Service<br/>━━━━━━━━━<br/>• User Profiles<br/>• Follow System<br/>• Trade Sharing<br/>• Comments & Likes<br/>━━━━━━━━━<br/>PostgreSQL + Elasticsearch")
         
         Notification("Notification Service<br/>━━━━━━━━━<br/>• Email Alerts<br/>• Push Notifications<br/>• SMS Alerts<br/>• Trade Confirmations<br/>━━━━━━━━━<br/>SendGrid + FCM + Twilio")
@@ -63,11 +77,11 @@ flowchart TB
         Wallet("Wallet Service<br/>━━━━━━━━━<br/>• Virtual Balance<br/>• Deposits/Withdrawals<br/>• Transaction History<br/>• Fund Management<br/>━━━━━━━━━<br/>PostgreSQL")
     end
 
-    subgraph EventSystem["📨 EVENT-DRIVEN COMMUNICATION"]
+    subgraph EventSystem[" "]
         MQ("Message Broker<br/>━━━━━━━━━<br/>Apache Kafka / RabbitMQ<br/>━━━━━━━━━<br/>Event Topics:<br/>• order.placed<br/>• order.matched<br/>• trade.executed<br/>• portfolio.updated<br/>• market.data.update<br/>• notification.trigger")
     end
 
-    subgraph DataLayer["💾 DATA PERSISTENCE LAYER"]
+    subgraph DataLayer[" "]
         PG[("🗄️ PostgreSQL<br/>━━━━━━━━━<br/>Primary Database<br/>Users • Orders<br/>Trades • Social Data")]
         
         RDS[("⚡ Redis Cluster<br/>━━━━━━━━━<br/>Cache & Real-time<br/>Sessions • Order Book<br/>Active Orders")]
@@ -79,7 +93,7 @@ flowchart TB
         S3[("📦 S3 / MinIO<br/>━━━━━━━━━<br/>Object Storage<br/>Profile Images<br/>Reports • Backups")]
     end
 
-    subgraph Operations["🔧 OPERATIONS & INFRASTRUCTURE"]
+    subgraph Operations[" "]
         Monitor("🔍 Monitoring<br/>━━━━━━━━━<br/>Prometheus + Grafana<br/>ELK Stack<br/>Sentry + Jaeger")
         
         Deploy("🚀 Deployment<br/>━━━━━━━━━<br/>Docker + Kubernetes<br/>CI/CD Pipeline<br/>Cloud: AWS/GCP/Azure")
@@ -147,15 +161,15 @@ flowchart TB
     MarketServices -.-> Deploy
     UserServices -.-> Deploy
 
-    %% Styling
-    classDef client fill:#e3f2fd,stroke:#1565c0,stroke-width:3px
-    classDef security fill:#fff3e0,stroke:#f57c00,stroke-width:3px
-    classDef core fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-    classDef market fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
-    classDef user fill:#fce4ec,stroke:#c2185b,stroke-width:2px
-    classDef event fill:#e0f2f1,stroke:#00796b,stroke-width:2px
-    classDef data fill:#fff9c4,stroke:#f9a825,stroke-width:2px
-    classDef ops fill:#eceff1,stroke:#455a64,stroke-width:2px
+    %% Vibrant Neon Dark Mode Styling
+    classDef client fill:#0d1b2a,stroke:#00d9ff,stroke-width:4px,color:#00d9ff,font-size:24px,padding:15px
+    classDef security fill:#1a0f2e,stroke:#b400ff,stroke-width:4px,color:#e0b3ff,font-size:24px,padding:15px
+    classDef core fill:#0a2e0d,stroke:#00ff88,stroke-width:4px,color:#88ffcc,font-size:24px,padding:15px
+    classDef market fill:#2e1a00,stroke:#ff9500,stroke-width:4px,color:#ffcc80,font-size:24px,padding:15px
+    classDef user fill:#2e0042,stroke:#ff00ff,stroke-width:4px,color:#ff99ff,font-size:24px,padding:15px
+    classDef event fill:#002e2e,stroke:#00ffff,stroke-width:4px,color:#80ffff,font-size:24px,padding:15px
+    classDef data fill:#2e1f00,stroke:#ffdd00,stroke-width:4px,color:#ffee99,font-size:24px,padding:15px
+    classDef ops fill:#1a1a2e,stroke:#7c8db5,stroke-width:4px,color:#c5d4ff,font-size:24px,padding:15px
 
     class WebApp,MobileApp client
     class Auth,ApiGW security
