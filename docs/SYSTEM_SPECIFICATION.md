@@ -25,113 +25,146 @@ Scope (initial MVP):
 
 The platform follows a microservices architecture with clear separation of concerns across layers:
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         PAPER TRADING PLATFORM                           │
-│                        (Microservices Architecture)                      │
-└─────────────────────────────────────────────────────────────────────────┘
+```mermaid
+---
+config:
+  layout: elk
+---
+flowchart TB
+    subgraph Client["👥 CLIENT APPLICATIONS"]
+        WebApp("🌐 Web Application<br/>Responsive Design<br/>Desktop • Tablet • Mobile")
+        MobileApp("📱 Mobile Application<br/>Native iOS & Android<br/>Optional Future Release")
+    end
 
-┌──────────────────────────────────────────────────────────────────────────┐
-│                           CLIENT LAYER                                    │
-├──────────────────────────────────────────────────────────────────────────┤
-│  Web App (React/Next.js)  │  Mobile (React Native - Future)              │
-└──────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│                         API GATEWAY LAYER                                 │
-├──────────────────────────────────────────────────────────────────────────┤
-│  NGINX / Kong / AWS API Gateway                                          │
-│  ├─ Rate Limiting                                                        │
-│  ├─ Authentication (JWT Validation)                                      │
-│  ├─ Request Routing                                                      │
-│  └─ Load Balancing                                                       │
-└──────────────────────────────────────────────────────────────────────────┘
-                                    │
-                    ┌───────────────┼───────────────┐
-                    ▼               ▼               ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│                        MICROSERVICES LAYER                                │
-├──────────────────────────────────────────────────────────────────────────┤
-│                                                                            │
-│  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐ │
-│  │   Auth Service     │  │   Trading Service  │  │  Portfolio Service │ │
-│  │                    │  │                    │  │                    │ │
-│  │ ├─ User Management │  │ ├─ Order Validation│  │ ├─ Holdings Track │ │
-│  │ ├─ JWT Tokens      │  │ ├─ Order Placement │  │ ├─ P&L Calculation│ │
-│  │ ├─ Session Mgmt    │  │ ├─ Order Status    │  │ ├─ Performance    │ │
-│  │ └─ Permissions     │  │ └─ User Orders API │  │ └─ Risk Metrics   │ │
-│  └────────────────────┘  └────────────────────┘  └────────────────────┘ │
-│                                                                            │
-│  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐ │
-│  │  Matching Engine   │  │   Market Data      │  │  Analytics Service │ │
-│  │     Service        │  │     Service        │  │                    │ │
-│  │                    │  │                    │  │ ├─ Trade Stats     │ │
-│  │ ├─ Order Book Mgmt │  │ ├─ BBO Calculation │  │ ├─ User Rankings   │ │
-│  │ ├─ Matching Logic  │  │ ├─ L2 Order Book   │  │ ├─ Market Insights │ │
-│  │ ├─ Trade Execution │  │ ├─ Price Charts    │  │ └─ Reports         │ │
-│  │ └─ Event Publisher │  │ └─ Historical Data │  │                    │ │
-│  └────────────────────┘  └────────────────────┘  └────────────────────┘ │
-│                                                                            │
-│  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐ │
-│  │   Social Service   │  │ Notification Svc   │  │  Wallet Service    │ │
-│  │                    │  │                    │  │                    │ │
-│  │ ├─ User Profiles   │  │ ├─ Email Alerts    │  │ ├─ Virtual Balance │ │
-│  │ ├─ Follow/Friends  │  │ ├─ Push Notifs     │  │ ├─ Transactions   │ │
-│  │ ├─ Leaderboards    │  │ ├─ Trade Alerts    │  │ ├─ Fund Mgmt      │ │
-│  │ ├─ Trade Sharing   │  │ └─ WebSocket Push  │  │ └─ Balance History│ │
-│  │ └─ Comments/Likes  │  │                    │  │                    │ │
-│  └────────────────────┘  └────────────────────┘  └────────────────────┘ │
-└──────────────────────────────────────────────────────────────────────────┘
-                                    │
-                    ┌───────────────┼───────────────┐
-                    ▼               ▼               ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│                         MESSAGE BROKER LAYER                              │
-├──────────────────────────────────────────────────────────────────────────┤
-│  Apache Kafka / RabbitMQ                                                 │
-│  ├─ order.placed         (Trading → Matching Engine)                    │
-│  ├─ order.matched        (Matching Engine → Portfolio)                  │
-│  ├─ trade.executed       (Matching Engine → All Services)               │
-│  ├─ portfolio.updated    (Portfolio → Analytics/Notification)           │
-│  └─ market.data.update   (Market Data → WebSocket Server)               │
-└──────────────────────────────────────────────────────────────────────────┘
-                                    │
-                    ┌───────────────┼───────────────┐
-                    ▼               ▼               ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│                         DATA LAYER                                        │
-├──────────────────────────────────────────────────────────────────────────┤
-│                                                                            │
-│  ┌─────────────────────┐  ┌─────────────────────┐  ┌──────────────────┐ │
-│  │   PostgreSQL        │  │   Redis Cluster     │  │  TimescaleDB     │ │
-│  │  (Primary Store)    │  │   (Cache/Session)   │  │  (Time-Series)   │ │
-│  │                     │  │                     │  │                  │ │
-│  │ ├─ Users            │  │ ├─ Active Orders   │  │ ├─ Trade History│ │
-│  │ ├─ Orders           │  │ ├─ Order Books     │  │ ├─ Price Data   │ │
-│  │ ├─ Trades           │  │ ├─ BBO Cache       │  │ ├─ Analytics    │ │
-│  │ ├─ Portfolios       │  │ ├─ Sessions        │  │ └─ Metrics      │ │
-│  │ ├─ Social Data      │  │ ├─ Leaderboards    │  │                  │ │
-│  │ └─ User Profiles    │  │ └─ Pub/Sub         │  │                  │ │
-│  └─────────────────────┘  └─────────────────────┘  └──────────────────┘ │
-│                                                                            │
-│  ┌─────────────────────┐  ┌─────────────────────┐                        │
-│  │   Elasticsearch     │  │   S3 / Object Store │                        │
-│  │  (Search/Logs)      │  │   (File Storage)    │                        │
-│  │                     │  │                     │                        │
-│  │ ├─ User Search      │  │ ├─ Profile Images   │                        │
-│  │ ├─ Trade Search     │  │ ├─ Reports (PDF)    │                        │
-│  │ ├─ Audit Logs       │  │ ├─ Backups          │                        │
-│  │ └─ App Logs         │  │ └─ Documents        │                        │
-│  └─────────────────────┘  └─────────────────────┘                        │
-└──────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│                    MONITORING & OBSERVABILITY                             │
-├──────────────────────────────────────────────────────────────────────────┤
-│  Prometheus + Grafana  │  ELK Stack  │  Sentry  │  Jaeger (Tracing)     │
-└──────────────────────────────────────────────────────────────────────────┘
+    subgraph Security["🔐 SECURITY & AUTHENTICATION"]
+        Auth("Auth Service<br/>━━━━━━━━━<br/>• User Management<br/>• JWT Tokens<br/>• Session Handling<br/>• Role-Based Access<br/>━━━━━━━━━<br/>PostgreSQL + Redis")
+        ApiGW("API Gateway<br/>━━━━━━━━━<br/>NGINX / Kong / AWS<br/>━━━━━━━━━<br/>• JWT Validation<br/>• Rate Limiting<br/>• Load Balancing<br/>• SSL Termination")
+    end
+
+    subgraph CoreTrading["📊 CORE TRADING SERVICES"]
+        Trading("Trading Service<br/>━━━━━━━━━<br/>• Order Placement<br/>• Order Validation<br/>• Order History<br/>• Order Status<br/>━━━━━━━━━<br/>PostgreSQL + Redis")
+        
+        Matching("Matching Engine<br/>━━━━━━━━━<br/>• Order Book Management<br/>• Buy/Sell Matching<br/>• Trade Execution<br/>• Price-Time Priority<br/>━━━━━━━━━<br/>Redis In-Memory")
+        
+        Portfolio("Portfolio Service<br/>━━━━━━━━━<br/>• Holdings Tracking<br/>• P&L Calculation<br/>• Performance Metrics<br/>• Risk Analysis<br/>━━━━━━━━━<br/>PostgreSQL")
+    end
+
+    subgraph MarketServices["📈 MARKET & ANALYTICS"]
+        Market("Market Data Service<br/>━━━━━━━━━<br/>• Real-time Prices<br/>• Historical Data<br/>• OHLCV Charts<br/>• Market Depth<br/>━━━━━━━━━<br/>TimescaleDB + Redis")
+        
+        Analytics("Analytics Service<br/>━━━━━━━━━<br/>• Trade Statistics<br/>• User Rankings<br/>• Performance Reports<br/>• Leaderboards<br/>━━━━━━━━━<br/>TimescaleDB")
+    end
+
+    subgraph UserServices["👥 USER ENGAGEMENT"]
+        Social("Social Service<br/>━━━━━━━━━<br/>• User Profiles<br/>• Follow System<br/>• Trade Sharing<br/>• Comments & Likes<br/>━━━━━━━━━<br/>PostgreSQL + Elasticsearch")
+        
+        Notification("Notification Service<br/>━━━━━━━━━<br/>• Email Alerts<br/>• Push Notifications<br/>• SMS Alerts<br/>• Trade Confirmations<br/>━━━━━━━━━<br/>SendGrid + FCM + Twilio")
+        
+        Wallet("Wallet Service<br/>━━━━━━━━━<br/>• Virtual Balance<br/>• Deposits/Withdrawals<br/>• Transaction History<br/>• Fund Management<br/>━━━━━━━━━<br/>PostgreSQL")
+    end
+
+    subgraph EventSystem["📨 EVENT-DRIVEN COMMUNICATION"]
+        MQ("Message Broker<br/>━━━━━━━━━<br/>Apache Kafka / RabbitMQ<br/>━━━━━━━━━<br/>Event Topics:<br/>• order.placed<br/>• order.matched<br/>• trade.executed<br/>• portfolio.updated<br/>• market.data.update<br/>• notification.trigger")
+    end
+
+    subgraph DataLayer["💾 DATA PERSISTENCE LAYER"]
+        PG[("🗄️ PostgreSQL<br/>━━━━━━━━━<br/>Primary Database<br/>Users • Orders<br/>Trades • Social Data")]
+        
+        RDS[("⚡ Redis Cluster<br/>━━━━━━━━━<br/>Cache & Real-time<br/>Sessions • Order Book<br/>Active Orders")]
+        
+        TSDB[("📊 TimescaleDB<br/>━━━━━━━━━<br/>Time-Series Data<br/>Price History • OHLCV<br/>Analytics • Metrics")]
+        
+        ES[("🔍 Elasticsearch<br/>━━━━━━━━━<br/>Search & Logs<br/>User Search<br/>Application Logs")]
+        
+        S3[("📦 S3 / MinIO<br/>━━━━━━━━━<br/>Object Storage<br/>Profile Images<br/>Reports • Backups")]
+    end
+
+    subgraph Operations["🔧 OPERATIONS & INFRASTRUCTURE"]
+        Monitor("🔍 Monitoring<br/>━━━━━━━━━<br/>Prometheus + Grafana<br/>ELK Stack<br/>Sentry + Jaeger")
+        
+        Deploy("🚀 Deployment<br/>━━━━━━━━━<br/>Docker + Kubernetes<br/>CI/CD Pipeline<br/>Cloud: AWS/GCP/Azure")
+    end
+
+    %% Client to Gateway
+    WebApp -->|HTTPS| ApiGW
+    MobileApp -.->|HTTPS| ApiGW
+    
+    %% Gateway to Auth
+    ApiGW --> Auth
+    
+    %% Gateway to Services
+    ApiGW --> Trading
+    ApiGW --> Portfolio
+    ApiGW --> Market
+    ApiGW --> Analytics
+    ApiGW --> Social
+    ApiGW --> Notification
+    ApiGW --> Wallet
+    
+    %% Core Trading Flow
+    Trading -->|Submit Order| Matching
+    Matching -->|Trade Executed| Portfolio
+    Market -->|Price Alert| Notification
+    
+    %% Event-Driven Architecture
+    Auth --> MQ
+    Trading --> MQ
+    Matching --> MQ
+    Portfolio --> MQ
+    Market --> MQ
+    Analytics --> MQ
+    Social --> MQ
+    Notification --> MQ
+    Wallet --> MQ
+    
+    %% Database Connections
+    MQ --> PG
+    MQ --> RDS
+    MQ --> TSDB
+    MQ --> ES
+    MQ --> S3
+    
+    Auth --> PG
+    Auth --> RDS
+    Trading --> PG
+    Trading --> RDS
+    Portfolio --> PG
+    Matching --> RDS
+    Market --> TSDB
+    Market --> RDS
+    Analytics --> TSDB
+    Social --> PG
+    Social --> ES
+    Wallet --> PG
+    
+    %% Operations
+    CoreTrading -.-> Monitor
+    MarketServices -.-> Monitor
+    UserServices -.-> Monitor
+    DataLayer -.-> Monitor
+    
+    CoreTrading -.-> Deploy
+    MarketServices -.-> Deploy
+    UserServices -.-> Deploy
+
+    %% Styling
+    classDef client fill:#e3f2fd,stroke:#1565c0,stroke-width:3px
+    classDef security fill:#fff3e0,stroke:#f57c00,stroke-width:3px
+    classDef core fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    classDef market fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    classDef user fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    classDef event fill:#e0f2f1,stroke:#00796b,stroke-width:2px
+    classDef data fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    classDef ops fill:#eceff1,stroke:#455a64,stroke-width:2px
+
+    class WebApp,MobileApp client
+    class Auth,ApiGW security
+    class Trading,Matching,Portfolio core
+    class Market,Analytics market
+    class Social,Notification,Wallet user
+    class MQ event
+    class PG,RDS,TSDB,ES,S3 data
+    class Monitor,Deploy ops
 ```
 
 Key components:
