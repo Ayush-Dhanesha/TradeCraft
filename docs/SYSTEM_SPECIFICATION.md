@@ -193,10 +193,18 @@ Key components:
 ## 3. Technology Stack
 
 ### Backend Services
-- **Primary Language**: Go (Golang) - chosen for high performance, concurrency, and low latency
-- **API Framework**: Gin, Echo, or Chi for HTTP routing
-- **gRPC**: For internal service-to-service communication (optional, high-performance alternative)
-- **WebSocket**: Gorilla WebSocket or similar for real-time streaming
+- **Primary Framework**: Spring Boot 3.x (Java 17+ or Java 21 LTS)
+- **Spring Ecosystem**:
+  - **Spring Web**: RESTful API development
+  - **Spring WebFlux**: Reactive programming for high-throughput services (Matching Engine, Market Data)
+  - **Spring Data JPA**: PostgreSQL/TimescaleDB integration with Hibernate
+  - **Spring Data Redis**: Redis operations and caching
+  - **Spring Kafka**: Kafka producer/consumer integration
+  - **Spring Security**: Authentication, authorization, JWT handling
+  - **Spring WebSocket**: Real-time bidirectional communication (STOMP over WebSocket)
+  - **Spring Cloud**: Service discovery (Eureka), config management, circuit breakers (Resilience4j)
+  - **Spring Actuator**: Health checks, metrics exposure for Prometheus
+  - **Spring Batch**: Scheduled jobs for analytics and reports
 
 ### Data Layer
 - **PostgreSQL 15+**: Primary relational database
@@ -204,25 +212,27 @@ Key components:
 - **Redis 7+**: Caching, session management, pub/sub, real-time data
 - **Elasticsearch 8+**: Full-text search and log aggregation
 - **S3 / MinIO**: Object storage for files and backups
+- **Flyway / Liquibase**: Database migration and versioning
 
 ### Message Broker
 - **Apache Kafka**: Event streaming and inter-service communication
 - **Alternative**: RabbitMQ (if lower latency needed for specific use cases)
 
 ### Infrastructure & DevOps
-- **Containerization**: Docker with multi-stage builds
+- **Containerization**: Docker with multi-stage builds (Maven/Gradle + JRE slim images)
 - **Orchestration**: Kubernetes (EKS on AWS)
 - **Service Mesh**: Istio or Linkerd (optional, for advanced traffic management)
-- **API Gateway**: NGINX, Kong, or AWS API Gateway
+- **API Gateway**: Spring Cloud Gateway, NGINX, Kong, or AWS API Gateway
 - **CI/CD**: GitHub Actions or GitLab CI
 - **IaC**: Terraform for infrastructure provisioning
+- **Build Tools**: Maven or Gradle
 
 ### Observability
-- **Metrics**: Prometheus + Grafana
-- **Logging**: ELK Stack (Elasticsearch, Logstash, Kibana) or EFK (Fluentd)
-- **Tracing**: Jaeger or Tempo for distributed tracing
+- **Metrics**: Micrometer (Spring Actuator) → Prometheus + Grafana
+- **Logging**: SLF4J + Logback → ELK Stack (Elasticsearch, Logstash, Kibana)
+- **Tracing**: Spring Cloud Sleuth + Zipkin or Jaeger for distributed tracing
 - **Error Tracking**: Sentry
-- **APM**: Optional - Datadog, New Relic for application performance monitoring
+- **APM**: Optional - Datadog, New Relic, or Elastic APM for application performance monitoring
 
 ### External Services
 - **Email**: SendGrid or AWS SES
@@ -230,13 +240,14 @@ Key components:
 - **SMS**: Twilio
 - **Market Data**: Binance WebSocket API, CoinGecko API (fallback)
 
-### Development Tools
-- **Linting**: golangci-lint
-- **Formatting**: gofmt, goimports
-- **Testing**: Go standard testing package, testify for assertions
-- **Mocking**: gomock, mockery for interface mocks
-- **Load Testing**: k6, Gatling
-- **API Documentation**: OpenAPI/Swagger with swaggo
+### Development Tools & Libraries
+- **Testing**: JUnit 5, Mockito, Spring Boot Test, Testcontainers for integration tests
+- **Load Testing**: k6, Gatling, JMeter
+- **API Documentation**: Springdoc OpenAPI (Swagger UI)
+- **Code Quality**: SonarQube, Checkstyle, SpotBugs
+- **Lombok**: Reduce boilerplate code
+- **MapStruct**: Bean mapping
+- **Validation**: Jakarta Bean Validation (Hibernate Validator)
 
 ---
 
@@ -399,30 +410,49 @@ Compliance & Privacy
 ## 9. Deployment & Infrastructure (high-level)
 
 Target: AWS (managed services recommended):
-- EKS / ECS for containerized microservices
-- RDS (Postgres) with extension TimescaleDB (self-managed or RDS-compatible) or hosted Timescale
-- MSK (Managed Kafka) or self-hosted Kafka on EC2
-- ElastiCache (Redis) cluster
-- S3 for object storage
-- ALB/GWLB and Route 53 for ingress; API Gateway optional
-- IAM roles for service-to-service access; Secrets Manager for secrets
+- **EKS** (Elastic Kubernetes Service) for containerized Spring Boot microservices
+- **RDS (Postgres)** with TimescaleDB extension (self-managed or RDS-compatible) or hosted Timescale Cloud
+- **MSK** (Managed Kafka) or self-hosted Kafka on EC2
+- **ElastiCache (Redis)** cluster for caching and session storage
+- **S3** for object storage (profile images, reports, backups)
+- **ALB** (Application Load Balancer) and Route 53 for ingress; API Gateway optional
+- **ECR** (Elastic Container Registry) for Docker images
+- **IAM roles** for service-to-service access; Secrets Manager for secrets
+- **CloudWatch** for additional logging and monitoring
 
-CI/CD
-- GitHub Actions / GitLab CI pipeline: build, test, static analysis, image publish to ECR, progressive rollout to staging then production.
-- Docker multi-stage builds for optimized container images.
-- Automated testing gates before deployment (unit, integration, contract tests).
+Container Configuration:
+- **Base Image**: eclipse-temurin:21-jre-alpine or amazoncorretto:21-alpine
+- **Multi-stage builds**: Maven/Gradle build → slim JRE runtime
+- **Resource limits**: Memory (heap + non-heap), CPU, health checks configured in K8s deployments
+
+CI/CD Pipeline:
+- **GitHub Actions / GitLab CI**: 
+  1. Code checkout and cache dependencies
+  2. Maven/Gradle build and compile
+  3. Run unit tests (JUnit)
+  4. Run integration tests (Testcontainers)
+  5. Static analysis (SonarQube, Checkstyle, SpotBugs)
+  6. Security scan (OWASP Dependency-Check, Snyk)
+  7. Build Docker image with multi-stage Dockerfile
+  8. Push to ECR with semantic versioning tags
+  9. Update K8s manifests with new image tag
+  10. Progressive rollout: dev → staging → production (with manual approval gates)
+- **Automated testing gates** before deployment (unit, integration, contract tests must pass).
+- **Rollback strategy**: Keep previous 3 image versions, automated rollback on health check failures.
 
 ---
 
 ## 10. Testing & QA Strategy
 
-- **Unit tests** for service logic (80% target for critical services like matching engine, wallet).
-- **Integration tests** using ephemeral docker-compose test environment (Postgres, Redis, Kafka) for end-to-end flows.
-- **Contract tests** for event schemas (Kafka topics) using schema registry validation.
-- **Load tests** with k6, Gatling, or similar tools to validate throughput and latency targets (target: 500+ orders/sec).
-- **Chaos testing** for resilience (network partitions, broker failures, pod restarts).
-- **Benchmark tests** for critical paths (matching engine, order placement, BBO calculation).
-- **Security testing** including penetration testing, dependency scanning, and OWASP compliance.
+- **Unit tests** for service logic using JUnit 5 and Mockito (80% target for critical services like matching engine, wallet).
+- **Integration tests** using Spring Boot Test with `@SpringBootTest` and Testcontainers for ephemeral containers (Postgres, Redis, Kafka).
+- **Contract tests** for event schemas (Kafka topics) using Spring Cloud Contract or Pact for consumer-driven contracts.
+- **Repository tests** with `@DataJpaTest` for database layer validation.
+- **WebMVC tests** with `@WebMvcTest` for controller layer testing.
+- **Load tests** with Gatling (JVM-based) or k6 to validate throughput and latency targets (target: 500+ orders/sec).
+- **Chaos testing** for resilience using Chaos Monkey for Spring Boot (network partitions, broker failures, pod restarts).
+- **Benchmark tests** for critical paths using JMH (Java Microbenchmark Harness) for matching engine, order placement, BBO calculation.
+- **Security testing** including penetration testing, OWASP Dependency-Check, Snyk for dependency scanning, and Spring Security test support.
 
 ---
 
@@ -445,20 +475,24 @@ CI/CD
 
 ## 13. Initial Developer Onboarding / Minimal Implementation Steps
 
-1. Initialize repository and create `docker-compose.yml` for local dev with: Postgres (with Timescale), Redis, Kafka + Zookeeper, and a simple Nginx gateway.
-2. Create `.env.example` listing DB, Redis, Kafka connection strings and secrets placeholders.
-3. Scaffold minimal health-check service with HTTP server and a simple producer/consumer for `trade.executed` (end-to-end smoke test).
-4. Add pre-commit hooks (linting, formatting, static analysis) and CI pipeline skeleton.
-5. Add observability: local Prometheus and Grafana dashboards for dev.
+1. Initialize Spring Boot microservices project structure using Spring Initializr or Maven/Gradle multi-module setup.
+2. Create `docker-compose.yml` for local dev with: Postgres (with Timescale), Redis, Kafka + Zookeeper, and optional Nginx gateway.
+3. Configure `application.yml` / `application.properties` for each service with profiles (dev, test, prod).
+4. Create `.env.example` listing DB, Redis, Kafka connection strings and secrets placeholders.
+5. Scaffold minimal health-check service with Spring Boot Actuator and a simple Kafka producer/consumer for `trade.executed` (end-to-end smoke test).
+6. Set up Flyway/Liquibase for database migrations.
+7. Add pre-commit hooks (Checkstyle, SpotBugs) and GitHub Actions CI pipeline (build, test, Docker image push).
+8. Add observability: Spring Actuator endpoints, local Prometheus and Grafana dashboards for dev.
+9. Configure Springdoc OpenAPI for automatic API documentation at `/swagger-ui.html`.
 
 ---
 
 ## 14. Roadmap & Next Milestones (first 4 weeks)
 
-- Week 1: Dev environment, Docker Compose, initial services scaffolding (Auth, Trading API, Matching Engine skeleton).
-- Week 2: Database schema and migrations; implement order book data structures.
-- Week 3: Authentication flows and session management; basic Wallet service.
-- Week 4: Matching engine integration, produce `trade.executed` and basic Portfolio consumer.
+- **Week 1**: Dev environment setup, Docker Compose, Spring Boot multi-module project structure, initial services scaffolding (Auth, Trading API, Matching Engine skeleton with Spring WebFlux).
+- **Week 2**: Database schema design and Flyway migrations; implement order book data structures with concurrent collections; Spring Data JPA entity models.
+- **Week 3**: Spring Security configuration for JWT authentication flows and session management (Redis); basic Wallet service with transaction management.
+- **Week 4**: Matching engine integration with reactive streams, produce `trade.executed` events via Spring Kafka, and basic Portfolio consumer service.
 
 ---
 
