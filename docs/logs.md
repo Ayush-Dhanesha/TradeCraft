@@ -41,6 +41,18 @@ A running log of what I implemented on which day, for my own tracking and future
   - Added `findBySymbol(String symbol)`
   - Added `findByUserIdAndStatus(UUID userId, OrderStatus status)`
 
+**Troubleshooting & Fixes:**
+- [x] Resolved "Cannot load driver class: org.postgresql.Driver" error
+  - Root cause: PostgreSQL driver dependency not resolving from Spring Boot parent POM
+  - Solution: Added explicit version `42.7.4` to `org.postgresql:postgresql` dependency
+  - Verification: Driver successfully downloaded (1.1 MB) and appears in runtime dependency tree
+- [x] Application successfully started with all components operational
+  - PostgreSQL driver loaded correctly
+  - Flyway migrations applied
+  - Hibernate EntityManagerFactory initialized
+  - Tomcat running on port 8081
+  - Total startup time: ~3.5 seconds
+
 ---
 
 ### Area: 💡 Architecture Deep Dive — Senior Developer Explanation
