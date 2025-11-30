@@ -12,107 +12,87 @@ A running log of what I implemented on which day, for my own tracking and future
 
 ## 2025-11-30
 
-### Area: Infrastructure & Configuration (trading-service)
+### Area: Infrastructure Setup & Database Foundation (trading-service)
 
-- [ ] Added `docker-compose.yml` with:
-  - Postgres 15 (DB: `tradecraft`, user: `tradecraft`)
-  - Redis 7 for caching/sessions
-- [ ] Verified containers start with `docker compose up -d`
-- [ ] Confirmed Postgres is reachable from host machine
+**Infrastructure:**
+- [x] Added `docker-compose.yml` with Postgres 15 + Redis 7 containers
+- [x] Configured `application.yml` with datasource, JPA, Flyway, Redis settings
+- [x] Fixed Docker authentication and timezone configuration conflicts
+- [x] Resolved port conflicts (moved app to 8081)
+- [x] Added component scanning for `com.tradecraft` package
 
-**Notes / Learnings:**
-- Understood how Docker Compose helps mirror production infra locally.
-- Practiced connecting a Spring Boot app to services running in containers.
-
----
-
-### Area: Application Configuration (trading-service)
-
-- [ ] Configured `application.yml`:
-  - Datasource (Postgres `tradecraft` DB)
-  - JPA settings (`ddl-auto=validate`, show SQL)
-  - Redis host/port
-  - Logging levels for root and `com.tradecraft` package
-- [ ] Ran the app and confirmed it starts without connection errors.
-
-**Notes / Learnings:**
-- Learned why we use `ddl-auto=validate` when we rely on Flyway migrations.
-- Saw how logging levels can be tuned per package.
-
----
-
-## 2025-12-01
-
-### Area: Database Schema & Migrations (trading-service)
-
+**Database Schema & Migrations:**
 - [x] Added Flyway migration `V1__init_trading.sql`:
   - `users` table with email, username, hashed_password
   - ENUMs: `order_side`, `order_type`, `order_status`
   - `orders` table linked to `users` with ON DELETE CASCADE
   - Indexes for common query patterns (user_id, symbol, status, created_at)
-- [x] Started the app and verified Flyway applied migrations.
-- [x] Confirmed `users`, `orders`, and `flyway_schema_history` tables exist in Postgres.
+- [x] Verified Flyway applied migrations successfully
+- [x] Confirmed `users`, `orders`, and `flyway_schema_history` tables exist in Postgres
 
-**Notes / Learnings:**
-- Understood how Flyway keeps schema changes versioned and repeatable.
-- Saw how ENUM types are defined and used in Postgres.
-- Learned importance of indexes for performance on frequently queried columns.
-- Used NUMERIC(18,8) for precise decimal calculations (never float for money!).
-
----
-
-### Area: Domain Model & Repository (trading-service)
-
-- [x] Created Java enums: `OrderSide`, `OrderType`, `OrderStatus`
-  - Match Postgres ENUMs exactly
+**Domain Model & Repository:**
+- [x] Created Java enums: `OrderSide`, `OrderType`, `OrderStatus` matching Postgres ENUMs
 - [x] Created `Order` JPA entity in `com.tradecraft.trading.domain`
-  - Mapped all fields to database columns with appropriate annotations
-  - Used `@Enumerated(EnumType.STRING)` for enum mapping
-  - Used UUID, BigDecimal, OffsetDateTime for proper type safety
+  - Mapped all fields with proper annotations (@Id, @Column, @Enumerated)
+  - Used UUID, BigDecimal, OffsetDateTime for type safety
   - Added `@PrePersist` and `@PreUpdate` lifecycle callbacks for timestamps
 - [x] Created `OrderRepository` extending `JpaRepository<Order, UUID>`
-  - Added method `findByUserIdOrderByCreatedAtDesc(UUID userId)`
-  - Added method `findBySymbol(String symbol)`
-  - Added method `findByUserIdAndStatus(UUID userId, OrderStatus status)`
-
-**Notes / Learnings:**
-- Learned how JPA annotations map Java classes to DB tables.
-- Saw how Spring Data builds queries from method names (derived queries).
-- Understood @PrePersist/@PreUpdate for automatic timestamp management.
-- Used Lombok annotations (@Data, @Builder) to reduce boilerplate code.
+  - Added `findByUserIdOrderByCreatedAtDesc(UUID userId)`
+  - Added `findBySymbol(String symbol)`
+  - Added `findByUserIdAndStatus(UUID userId, OrderStatus status)`
 
 ---
 
----
+### Area: 💡 Architecture Deep Dive — Senior Developer Explanation
 
-## 2025-11-30 (Continued)
+**Component Deep Dive Completed:**
 
-### Area: Setup & Configuration Fixes (trading-service)
+- **PostgreSQL 15**: Core transactional database with UUIDs, enums, strong ACID guarantees. Configured with explicit dialect, UTC timezone handling, and validation-only DDL mode for Flyway-first schema management.
 
-- [x] Fixed Docker authentication issues (web-based login)
-- [x] Resolved PostgreSQL timezone configuration conflicts
-  - Removed MySQL-specific parameters from JDBC URL
-  - Configured Hibernate timezone to UTC
-  - Set `allow_jdbc_metadata_access: false` to bypass metadata queries
-- [x] Changed application port from 8080 to 8081 to avoid conflicts
-- [x] Added component scanning for `com.tradecraft` package
-- [x] Created convenience scripts:
-  - `run-app.bat` for easy startup
-  - `QUICK_START.md` with verification steps
-  - `SETUP_COMPLETE.md` with comprehensive guide
+- **Flyway**: Database version control ensuring schema consistency across environments. Tracks applied migrations via `flyway_schema_history`, uses versioned naming convention (V1__description.sql), and prevents accidental schema drift.
+
+- **Hibernate/JPA**: Maps domain objects to relational tables, validates schema at startup. Entity lifecycle callbacks (`@PrePersist`, `@PreUpdate`) manage timestamps automatically. Uses `ddl-auto=validate` to fail fast on schema mismatches.
+
+- **Data Types**: 
+  - UUID for distributed identity (avoids sequential ID guessing, supports multi-region scaling)
+  - BigDecimal for precise finance math (NUMERIC(18,8) prevents floating-point rounding errors)
+  - OffsetDateTime for global timestamp accuracy (TIMESTAMPTZ preserves timezone info)
+  - DB enums for domain integrity (order_side, order_type, order_status enforce valid states at database level)
+
+- **Spring Data JPA**: Auto-generated query implementation from method names (e.g., `findByUserIdOrderByCreatedAtDesc`). Repository interfaces extend `JpaRepository<Order, UUID>` providing CRUD + custom queries. Indexes aligned with query patterns (idx_orders_user_created supports ordered user queries).
+
+- **Redis 7**: In-memory cache and session foundation for future low-latency features. Currently configured but unused—ready for `@EnableCaching` + session storage when traffic patterns justify it.
+
+**Configuration Files Reviewed:**
+- `application.yml`: Datasource, JPA/Hibernate, Flyway, Redis settings
+- `docker-compose.yml`: PostgreSQL 15 + Redis 7 containers
+- `V1__init_trading.sql`: Initial schema with users, orders, enums, indexes
+- `Order.java`: Entity with proper type mapping (UUID, BigDecimal, OffsetDateTime)
+- `OrderRepository.java`: Spring Data JPA derived query methods
+
+**Critical Configuration Decisions:**
+- `ddl-auto: validate` prevents schema drift (Flyway-first approach)
+- `open-in-view: false` avoids lazy loading issues outside transactions
+- `hibernate.jdbc.time_zone: UTC` ensures consistent timestamp handling
+- `baseline-on-migrate: true` for safe Flyway adoption on existing schemas
+
+**Next Enhancements:**
+- [ ] Add optimistic locking (`@Version` column) for concurrent order updates
+- [ ] Introduce caching on high-traffic reads (enable Spring Cache + Redis)
+- [ ] Add DB extension migration for pgcrypto (`V2__enable_pgcrypto.sql`)
+- [ ] Add pagination for repository read endpoints (`Pageable` parameter support)
+- [ ] Consider partial index for open orders: `WHERE status IN ('NEW','PARTIALLY_FILLED')`
+- [ ] Add Bean Validation annotations (`@Positive`, `@NotNull`) to entity fields
+- [ ] Configure Redis serialization (Jackson2Json instead of JDK default)
+- [ ] Implement service layer to encapsulate business logic and status transitions
 
 **Notes / Learnings:**
-- Docker registry authentication required web-based flow on Windows
-- PostgreSQL JDBC driver doesn't use `serverTimezone` parameter (that's MySQL)
-- Hibernate 7.x requires explicit dialect when `allow_jdbc_metadata_access=false`
-- JVM timezone settings can conflict with database connection initialization
-- Background process management in PowerShell requires careful cleanup
-- Setting `@SpringBootApplication(scanBasePackages={...})` ensures all packages are scanned
-
-**Troubleshooting Done:**
-- Timezone mismatch between JVM ("Asia/Calcutta") and PostgreSQL
-- Port conflicts from multiple startup attempts
-- PowerShell background job limitations with Maven commands
+- Understood the "magic" behind Spring Boot auto-configuration (DataSource → Flyway → JPA → Repositories)
+- Learned trade-offs: PostgreSQL strong consistency vs NoSQL horizontal scaling
+- Saw how JPA lifecycle callbacks and database defaults can create dual sources of truth
+- Recognized importance of index alignment with query patterns for performance
+- Understood enum mapping: Java `@Enumerated(STRING)` + Postgres custom types = type safety at both layers
+- Realized Redis is "wired but idle" until explicit caching/session config added
 
 ---
 
